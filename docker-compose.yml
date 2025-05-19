@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: nisman_db
+    environment:
+      POSTGRES_DB: nisman_db
+      POSTGRES_USER: nisman_user
+      POSTGRES_PASSWORD: nisman_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: nisman_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  gcs:
+    image: fsouza/fake-gcs-server
+    container_name: nisman_gcs
+    ports:
+      - "4443:4443"
+    volumes:
+      - gcs_data:/storage
+    command: ["-scheme", "http", "-port", "4443", "-public-host", "localhost:4443"]
+    restart: unless-stopped
+
+  pubsub:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
+    container_name: nisman_pubsub
+    ports:
+      - "8085:8085"
+    volumes:
+      - pubsub_data:/data
+    command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
+    environment:
+      PUBSUB_EMULATOR_HOST: "pubsub:8085"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  gcs_data:
+  pubsub_data: 
