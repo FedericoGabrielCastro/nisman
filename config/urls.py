@@ -10,4 +10,7 @@ urlpatterns = [
     
     # Include URLs from cdt app
     path('api/', include('cdt.urls')),
+    
+    # Include URLs from tenants app
+    path('api/tenants/', include('tenants.urls')),
 ] 
