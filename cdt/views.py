@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from django.contrib.auth.models import User
 from .models import Preferencias
 from .factories import UserFactory, PreferenciasFactory
+from .exceptions import InvalidUsernameException, UserAlreadyExistsException
 
 # Create your views here.
 
@@ -194,3 +195,30 @@ class PreferenciasDetailAPIView(APIView):
             return Response({'error': 'No preferences found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class NismanAPIView(APIView):
+    """
+    API endpoint for /nisman POST
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        # Get the username from the request data
+        username = request.data.get('username', '')
+
+        # Validate that the username is not empty
+        if not username.strip():
+            raise InvalidUsernameException()
+
+        # Check if the user already exists
+        if User.objects.filter(username=username).exists():
+            raise UserAlreadyExistsException()
+
+        # Create the user
+        user = User.objects.create_user(
+            username=username,
+            email=f'{username}@example.com',
+            password='securepassword'
+        )
+        return Response({'message': f'User "{username}" created successfully'}, status=status.HTTP_201_CREATED)
