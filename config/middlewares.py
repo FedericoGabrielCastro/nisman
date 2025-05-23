@@ -7,7 +7,7 @@ class JsonExceptionMiddleware(MiddlewareMixin):
 
     def process_exception(self, request, exception):
         response_data = {
-            'error': str(exception),
+            'error5': str(exception),
             'type': exception.__class__.__name__
         }
         # Use the exception's status if available, otherwise default to 404

@@ -1,19 +1,15 @@
 from django.urls import path
 from .views import (
-    UserAPIView,
-    UserDetailAPIView,
-    PreferenciasAPIView,
-    PreferenciasDetailAPIView
+    TenantsAPIView,
+    NismanAPIView
 )
 
 app_name = 'tenants'
 
 urlpatterns = [
-    # User endpoints
-    path('users/', UserAPIView.as_view(), name='user-list'),
-    path('users/<int:user_id>/', UserDetailAPIView.as_view(), name='user-detail'),
+    # Tenants endpoint
+    path('tenants/', TenantsAPIView.as_view(), name='user-list'),
     
-    # Preferences endpoints
-    path('preferencias/', PreferenciasAPIView.as_view(), name='preferencias-list'),
-    path('preferencias/<int:user_id>/', PreferenciasDetailAPIView.as_view(), name='preferencias-detail'),
+    # Nisman endpoint
+    path('tenants/nisman/', NismanAPIView.as_view(), name='nisman'),
 ] 
