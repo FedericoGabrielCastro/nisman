@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework import permissions, status
 from rest_framework.response import Response
-from django.contrib.auth.models import User
+from .models import Tenant
 from .exceptions import InvalidUsernameException, UserAlreadyExistsException
 
 
@@ -15,37 +15,90 @@ class TenantsAPIView(APIView):
     def get(self, request):
         """
         GET /api/tenants/
-        List all users
+        List all tenants
         """
-        users = User.objects.all()
+        tenants = Tenant.objects.all()
         return Response([{
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name
-        } for user in users])
+            'id': tenant.id,
+            'name': tenant.name,
+            'schema_name': tenant.schema_name,
+            'domain': tenant.domain,
+            'is_active': tenant.is_active,
+            'created_at': tenant.created_at,
+            'updated_at': tenant.updated_at
+        } for tenant in tenants])
 
     def post(self, request):
         """
         POST /api/tenants/
-        Create a new user
+        Create a new tenant
         """
-        
-        user = User.objects.create_user(
-            username=request.data.get('username'),
-            email=request.data.get('email'),
-            password=request.data.get('password'),
-            first_name=request.data.get('first_name', ''),
-            last_name=request.data.get('last_name', '')
+        tenant = Tenant.objects.create(
+            name=request.data.get('name'),
+            schema_name=request.data.get('schema_name'),
+            domain=request.data.get('domain'),
+            is_active=request.data.get('is_active', True)
         )
         return Response({
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name
+            'id': tenant.id,
+            'name': tenant.name,
+            'schema_name': tenant.schema_name,
+            'domain': tenant.domain,
+            'is_active': tenant.is_active,
+            'created_at': tenant.created_at,
+            'updated_at': tenant.updated_at
         }, status=status.HTTP_201_CREATED)
+
+
+class TenantDetailAPIView(APIView):
+    """
+    API endpoint for specific tenant operations
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, tenant_id):
+        """
+        GET /api/tenants/{tenant_id}/
+        Get specific tenant details
+        """
+        tenant = get_object_or_404(Tenant, id=tenant_id)
+        return Response({
+            'id': tenant.id,
+            'name': tenant.name,
+            'schema_name': tenant.schema_name,
+            'domain': tenant.domain,
+            'is_active': tenant.is_active,
+            'created_at': tenant.created_at,
+            'updated_at': tenant.updated_at
+        })
+
+    def put(self, request, tenant_id):
+        """
+        PUT /api/tenants/{tenant_id}/
+        Update specific tenant
+        """
+        tenant = get_object_or_404(Tenant, id=tenant_id)
+        if not request.user.is_staff:
+            return Response(
+                {'error': 'Not authorized'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        tenant.name = request.data.get('name', tenant.name)
+        tenant.schema_name = request.data.get('schema_name', tenant.schema_name)
+        tenant.domain = request.data.get('domain', tenant.domain)
+        tenant.is_active = request.data.get('is_active', tenant.is_active)
+        tenant.save()
+        
+        return Response({
+            'id': tenant.id,
+            'name': tenant.name,
+            'schema_name': tenant.schema_name,
+            'domain': tenant.domain,
+            'is_active': tenant.is_active,
+            'created_at': tenant.created_at,
+            'updated_at': tenant.updated_at
+        })
 
 
 class NismanAPIView(APIView):
@@ -63,16 +116,17 @@ class NismanAPIView(APIView):
             raise InvalidUsernameException()
 
         # Check if the user already exists
-        if User.objects.filter(username=username).exists():
+        if Tenant.objects.filter(name=username).exists():
             raise UserAlreadyExistsException()
 
-        # Create the user
-        User.objects.create_user(
-            username=username,
-            email=f'{username}@example.com',
-            password='securepassword'
+        # Create the tenant
+        Tenant.objects.create(
+            name=username,
+            schema_name=username,
+            domain=f'{username}.example.com',
+            is_active=True
         )
         return Response(
-            {'message': f'User "{username}" created successfully'}, 
+            {'message': f'Tenant "{username}" created successfully'}, 
             status=status.HTTP_201_CREATED
         )
