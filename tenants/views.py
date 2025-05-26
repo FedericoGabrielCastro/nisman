@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from .models import Tenant
+from .serializers import TenantSerializer
 from .exceptions import InvalidUsernameException, UserAlreadyExistsException
 
 
@@ -18,36 +19,21 @@ class TenantsAPIView(APIView):
         List all tenants
         """
         tenants = Tenant.objects.all()
-        return Response([{
-            'id': tenant.id,
-            'name': tenant.name,
-            'schema_name': tenant.schema_name,
-            'domain': tenant.domain,
-            'is_active': tenant.is_active,
-            'created_at': tenant.created_at,
-            'updated_at': tenant.updated_at
-        } for tenant in tenants])
+        serializer = TenantSerializer(tenants, many=True)
+        return Response(serializer.data)
 
     def post(self, request):
         """
         POST /api/tenants/
         Create a new tenant
         """
-        tenant = Tenant.objects.create(
-            name=request.data.get('name'),
-            schema_name=request.data.get('schema_name'),
-            domain=request.data.get('domain'),
-            is_active=request.data.get('is_active', True)
+        serializer = TenantSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        tenant = serializer.save()
+        return Response(
+            TenantSerializer(tenant).data,
+            status=status.HTTP_201_CREATED
         )
-        return Response({
-            'id': tenant.id,
-            'name': tenant.name,
-            'schema_name': tenant.schema_name,
-            'domain': tenant.domain,
-            'is_active': tenant.is_active,
-            'created_at': tenant.created_at,
-            'updated_at': tenant.updated_at
-        }, status=status.HTTP_201_CREATED)
 
 
 class TenantDetailAPIView(APIView):
@@ -62,15 +48,8 @@ class TenantDetailAPIView(APIView):
         Get specific tenant details
         """
         tenant = get_object_or_404(Tenant, id=tenant_id)
-        return Response({
-            'id': tenant.id,
-            'name': tenant.name,
-            'schema_name': tenant.schema_name,
-            'domain': tenant.domain,
-            'is_active': tenant.is_active,
-            'created_at': tenant.created_at,
-            'updated_at': tenant.updated_at
-        })
+        serializer = TenantSerializer(tenant)
+        return Response(serializer.data)
 
     def put(self, request, tenant_id):
         """
@@ -84,21 +63,10 @@ class TenantDetailAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        tenant.name = request.data.get('name', tenant.name)
-        tenant.schema_name = request.data.get('schema_name', tenant.schema_name)
-        tenant.domain = request.data.get('domain', tenant.domain)
-        tenant.is_active = request.data.get('is_active', tenant.is_active)
-        tenant.save()
-        
-        return Response({
-            'id': tenant.id,
-            'name': tenant.name,
-            'schema_name': tenant.schema_name,
-            'domain': tenant.domain,
-            'is_active': tenant.is_active,
-            'created_at': tenant.created_at,
-            'updated_at': tenant.updated_at
-        })
+        serializer = TenantSerializer(tenant, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        tenant = serializer.save()
+        return Response(TenantSerializer(tenant).data)
 
 
 class NismanAPIView(APIView):
@@ -120,12 +88,16 @@ class NismanAPIView(APIView):
             raise UserAlreadyExistsException()
 
         # Create the tenant
-        Tenant.objects.create(
-            name=username,
-            schema_name=username,
-            domain=f'{username}.example.com',
-            is_active=True
-        )
+        data = {
+            'name': username,
+            'schema_name': username,
+            'domain': f'{username}.example.com',
+            'is_active': True
+        }
+        serializer = TenantSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        
         return Response(
             {'message': f'Tenant "{username}" created successfully'}, 
             status=status.HTTP_201_CREATED
