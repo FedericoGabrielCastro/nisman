@@ -29,7 +29,25 @@ interface Preferencias {
 }
 """
 
-# Create your models here.
+class PreferenciasQuerySet(models.QuerySet):
+    # Custom queryset methods
+    def with_dark_theme(self):
+        return self.filter(tema_oscuro=True)
+    
+    def with_email_notifications(self):
+        return self.filter(notificaciones_email=True)
+    
+    def with_push_notifications(self):
+        return self.filter(notificaciones_push=True)
+    
+    def by_language(self, language):
+        return self.filter(idioma=language)
+
+
+class PreferenciasManager(models.Manager):
+    def get_queryset(self):
+        return PreferenciasQuerySet(self.model, using=self._db)
+
 
 class Preferencias(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='preferencias')
@@ -39,6 +57,8 @@ class Preferencias(models.Model):
     idioma = models.CharField(max_length=10, default='es')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = PreferenciasManager()
 
     class Meta:
         verbose_name = 'Preferencia'
